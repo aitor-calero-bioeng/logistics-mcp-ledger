@@ -78,7 +78,7 @@ if check_password():
     logs = load_logs()
 
     # --- INTERFACE STRUCTURING ---
-    st.markdown("<div style='display:flex; justify-content:space-between; align-items:center;'><h1>🏭 Production Logistics SQL Ledger Control Panel</h1></div>", unsafe_with_html=True)
+    st.markdown("<div style='display:flex; justify-content:space-between; align-items:center;'><h1>🏭 Production Logistics SQL Ledger Control Panel</h1></div>", unsafe_allow_html=True)
     st.caption("Active Production Node linked live via SQLite Relational Engine.")
     
     if st.sidebar.button("🔒 Terminate Session / Logout"):
