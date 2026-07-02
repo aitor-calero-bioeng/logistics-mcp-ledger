@@ -1,10 +1,10 @@
 # /// script
-# dependencies = ["mcp[cli]", "pg8000", "python-dotenv"]
+# dependencies = ["mcp[cli]", "psycopg[binary]", "python-dotenv"]
 # ///
 
 import os
 import json
-import pg8000
+import psycopg
 from datetime import datetime
 from mcp.server.fastmcp import FastMCP
 
@@ -17,28 +17,12 @@ LOG_FILE = r"C:\Users\pilar\mcp-lab\audit_log.json"
 
 mcp = FastMCP("Bio_Vault_Enterprise")
 
-from urllib.parse import urlparse
-
 def get_db_connection():
-    """Uses Python's official URL parser to cleanly handle passwords with special characters and dots."""
-    parsed = urlparse(DB_URL)
-    
-    # Extract details safely
-    user = parsed.username
-    password = parsed.password
-    host = parsed.hostname
-    port = parsed.port or 5432
-    database = parsed.path.lstrip('/')
-    
-    return pg8000.connect(
-        user=user,
-        password=password,
-        host=host,
-        port=int(port),
-        database=database
-    )
+    """Passes the connection string directly to psycopg to natively handle special characters."""
+    return psycopg.connect(DB_URL)
+
 def init_db():
-    """Initializes the database structure using pg8000 syntax."""
+    """Initializes the database structure if it doesn't exist."""
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -88,16 +72,12 @@ def save_record(record_id: str, item_name: str, status: str, details: str) -> st
     cursor = conn.cursor()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # Try updating first, insert if it doesn't exist (Standard safe Postgres fallback)
-    cursor.execute("SELECT 1 FROM inventory WHERE record_id = %s;", [record_id])
-    if cursor.fetchone():
-        cursor.execute("""
-            UPDATE inventory SET name = %s, status = %s, details = %s, last_updated = %s WHERE record_id = %s;
-        """, [item_name, status, details, timestamp, record_id])
-    else:
-        cursor.execute("""
-            INSERT INTO inventory (record_id, name, status, details, last_updated) VALUES (%s, %s, %s, %s, %s);
-        """, [record_id, item_name, status, details, timestamp])
+    cursor.execute("""
+        INSERT INTO inventory (record_id, name, status, details, last_updated)
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (record_id) 
+        DO UPDATE SET name = EXCLUDED.name, status = EXCLUDED.status, details = EXCLUDED.details, last_updated = EXCLUDED.last_updated;
+    """, (record_id, item_name, status, details, timestamp))
         
     conn.commit()
     conn.close()
@@ -109,7 +89,7 @@ def remove_record(record_id: str) -> str:
     """Removes a specific testing identifier index from the local array loop."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM inventory WHERE record_id = %s;", [record_id])
+    cursor.execute("DELETE FROM inventory WHERE record_id = %s;", (record_id,))
     conn.commit()
     conn.close()
     log_audit_event(f"Dropped Cloud Record {record_id}")
@@ -125,19 +105,12 @@ def save_records_bulk(records_json: str) -> str:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         for r_id, r_info in new_records.items():
-            name = r_info.get("name", "Unknown")
-            status = r_info.get("status", "In Stock")
-            details = r_info.get("details", "N/A")
-            
-            cursor.execute("SELECT 1 FROM inventory WHERE record_id = %s;", [r_id])
-            if cursor.fetchone():
-                cursor.execute("""
-                    UPDATE inventory SET name = %s, status = %s, details = %s, last_updated = %s WHERE record_id = %s;
-                """, [name, status, details, timestamp, r_id])
-            else:
-                cursor.execute("""
-                    INSERT INTO inventory (record_id, name, status, details, last_updated) VALUES (%s, %s, %s, %s, %s);
-                """, [r_id, name, status, details, timestamp])
+            cursor.execute("""
+                INSERT INTO inventory (record_id, name, status, details, last_updated)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (record_id) 
+                DO UPDATE SET name = EXCLUDED.name, status = EXCLUDED.status, details = EXCLUDED.details, last_updated = EXCLUDED.last_updated;
+            """, (r_id, r_info.get("name", "Unknown"), r_info.get("status", "In Stock"), r_info.get("details", "N/A"), timestamp))
             
         conn.commit()
         conn.close()
