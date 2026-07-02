@@ -21,7 +21,7 @@ def check_password():
         return True
 
     # Render login page form layout
-    st.markdown("<h2 style='text-align: center;'>🔐 Enterprise Access Gate</h2>", unsafe_with_html=True)
+    st.markdown("<h2 style='text-align: center;'>🔐 Enterprise Access Gate</h2>", unsafe_allow_html=True)
     with st.container(border=True):
         username = st.text_input("User ID Descriptor", placeholder="e.g. admin")
         password = st.text_input("Security Access Code (Password)", type="password")
