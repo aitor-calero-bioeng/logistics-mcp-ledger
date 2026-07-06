@@ -1,3 +1,13 @@
+import subprocess
+import sys
+
+# Force-install authlib right inside the running server container
+try:
+    import authlib
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "authlib>=1.3.2"])
+
+
 import streamlit as st
 import psycopg2
 import json
