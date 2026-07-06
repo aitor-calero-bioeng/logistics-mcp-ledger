@@ -13,7 +13,7 @@ if not st.user.is_logged_in:
     st.title("🔒 Production Logistics Ledger Control Panel")
     st.info("Por favor, inicia sesión para acceder al panel de control de la red.")
     if st.button("Iniciar Sesión", type="primary"):
-        st.login()
+        st.login("google")
     st.stop()  # Aborts execution right here if not authenticated!
 
 # 3️⃣ THIRD: Welcome message & your active dashboard components
