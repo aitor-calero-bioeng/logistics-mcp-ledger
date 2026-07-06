@@ -1,9 +1,6 @@
-
-streamlit
+streamlit>=1.40.0
+authlib>=1.3.2
 pandas
 plotly
 psycopg2-binary
 python-dotenv
-authlib
-streamlit>=1.40.0
-Authlib>=1.3.2
